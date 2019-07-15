@@ -38,7 +38,7 @@ void ScaleRowDown2_NEON(const uint8_t* src_ptr,
         "+r"(dst_width)  // %2
       :
       : "v0", "v1"  // Clobber List
-      );
+  );
 }
 
 // Read 32x1 average down and write 16x1.
@@ -60,7 +60,7 @@ void ScaleRowDown2Linear_NEON(const uint8_t* src_ptr,
         "+r"(dst_width)  // %2
       :
       : "v0", "v1"  // Clobber List
-      );
+  );
 }
 
 // Read 32x2 average down and write 16x1.
@@ -89,7 +89,7 @@ void ScaleRowDown2Box_NEON(const uint8_t* src_ptr,
         "+r"(dst_width)    // %3
       :
       : "v0", "v1", "v2", "v3"  // Clobber List
-      );
+  );
 }
 
 void ScaleRowDown4_NEON(const uint8_t* src_ptr,
@@ -515,38 +515,26 @@ void ScaleRowDown38_2_Box_NEON(const uint8_t* src_ptr,
         "v19", "v30", "v31", "memory", "cc");
 }
 
-void ScaleAddRows_NEON(const uint8_t* src_ptr,
-                       ptrdiff_t src_stride,
-                       uint16_t* dst_ptr,
-                       int src_width,
-                       int src_height) {
-  const uint8_t* src_tmp;
+// Add a row of bytes to a row of shorts.  Used for box filter.
+// Reads 16 bytes and accumulates to 16 shorts at a time.
+void ScaleAddRow_NEON(const uint8_t* src_ptr,
+                      uint16_t* dst_ptr,
+                      int src_width) {
   asm volatile(
       "1:                                        \n"
-      "mov       %0, %1                          \n"
-      "mov       w12, %w5                        \n"
-      "eor       v2.16b, v2.16b, v2.16b          \n"
-      "eor       v3.16b, v3.16b, v3.16b          \n"
-      "2:                                        \n"
-      // load 16 pixels into q0
-      "ld1       {v0.16b}, [%0], %3              \n"
-      "uaddw2    v3.8h, v3.8h, v0.16b            \n"
-      "uaddw     v2.8h, v2.8h, v0.8b             \n"
-      "subs      w12, w12, #1                    \n"
-      "b.gt      2b                              \n"
-      "st1      {v2.8h, v3.8h}, [%2], #32        \n"  // store pixels
-      "add      %1, %1, #16                      \n"
-      "subs     %w4, %w4, #16                    \n"  // 16 processed per loop
+      "ld1      {v1.8h, v2.8h}, [%1]             \n"  // load accumulator
+      "ld1      {v0.16b}, [%0], #16              \n"  // load 16 bytes
+      "uaddw2   v2.8h, v2.8h, v0.16b             \n"  // add
+      "uaddw    v1.8h, v1.8h, v0.8b              \n"
+      "st1      {v1.8h, v2.8h}, [%1], #32        \n"  // store accumulator
+      "subs     %w2, %w2, #16                    \n"  // 16 processed per loop
       "b.gt     1b                               \n"
-      : "=&r"(src_tmp),    // %0
-        "+r"(src_ptr),     // %1
-        "+r"(dst_ptr),     // %2
-        "+r"(src_stride),  // %3
-        "+r"(src_width),   // %4
-        "+r"(src_height)   // %5
+      : "+r"(src_ptr),   // %0
+        "+r"(dst_ptr),   // %1
+        "+r"(src_width)  // %2
       :
-      : "memory", "cc", "w12", "v0", "v1", "v2", "v3"  // Clobber List
-      );
+      : "memory", "cc", "v0", "v1", "v2"  // Clobber List
+  );
 }
 
 // TODO(Yang Zhang): Investigate less load instructions for
@@ -731,7 +719,7 @@ void ScaleARGBRowDown2_NEON(const uint8_t* src_ptr,
         "+r"(dst_width)  // %2
       :
       : "memory", "cc", "v0", "v1", "v2", "v3"  // Clobber List
-      );
+  );
 }
 
 void ScaleARGBRowDown2Linear_NEON(const uint8_t* src_argb,
@@ -754,7 +742,7 @@ void ScaleARGBRowDown2Linear_NEON(const uint8_t* src_argb,
         "+r"(dst_width)  // %2
       :
       : "memory", "cc", "v0", "v1", "v2", "v3"  // Clobber List
-      );
+  );
 }
 
 void ScaleARGBRowDown2Box_NEON(const uint8_t* src_ptr,
@@ -1003,7 +991,7 @@ void ScaleRowDown2Box_16_NEON(const uint16_t* src_ptr,
         "+r"(dst_width)    // %3
       :
       : "v0", "v1", "v2", "v3"  // Clobber List
-      );
+  );
 }
 
 // Read 8x2 upsample with filtering and write 16x1.
@@ -1053,7 +1041,7 @@ void ScaleRowUp2_16_NEON(const uint16_t* src_ptr,
         "r"(14LL)          // %5
       : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v16", "v17", "v18",
         "v19"  // Clobber List
-      );
+  );
 }
 
 #endif  // !defined(LIBYUV_DISABLE_NEON) && defined(__aarch64__)
